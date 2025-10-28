@@ -30,8 +30,8 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
 )
 
-# memory = SingleChannel("DDR4_4Gb_x4_2400_pim", size="4GiB")
 memory = SingleChannel("DDR4_4Gb_x4_2400_pim", size="4GiB")
+# memory = SingleChannel("DDR4_4Gb_x4_2400_pim", size="4GiB")
 
 board = RiscvBoard(
     clk_freq="2GHz",
