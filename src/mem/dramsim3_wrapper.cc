@@ -45,6 +45,7 @@
 #include "DRAMsim3/src/dramsim3.h"
 #include "base/compiler.hh"
 #include "base/logging.hh"
+#include "dramsim3_wrapper.hh"
 
 namespace gem5
 {
@@ -121,6 +122,19 @@ void
 DRAMsim3Wrapper::enqueue(uint64_t addr, bool is_write)
 {
     [[maybe_unused]] bool success = dramsim->AddTransaction(addr, is_write);
+    assert(success);
+}
+
+void
+DRAMsim3Wrapper::enqueue_with_data(uint64_t addr, bool is_write,\
+        const uint8_t *cptr, size_t size){
+    [[maybe_unused]] bool success = dramsim->AddTransactionWithData( \
+            addr, \
+            is_write, \
+            cptr, \
+            size \
+            );
+
     assert(success);
 }
 

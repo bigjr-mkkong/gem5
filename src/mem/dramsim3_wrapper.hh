@@ -137,6 +137,14 @@ class DRAMsim3Wrapper
     void enqueue(uint64_t addr, bool is_write);
 
     /**
+     * Enqueue a packet. This assumes that canAccept has returned true.
+     *
+     * @param pkt Packet to turn into a DRAMsim3 transaction with data
+     */
+    void enqueue_with_data(uint64_t addr, bool is_write,\
+            const uint8_t *cptr, size_t size);
+
+    /**
      * Get the internal clock period used by DRAMsim3, specified in
      * ns.
      *
