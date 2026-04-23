@@ -15,11 +15,14 @@ from gem5.resources.resource import (
 )
 from gem5.simulate.simulator import Simulator
 
+# FIRMWARE = "/sw-payload/gem5-sw/opensbi/build/platform/generic/firmware/fw_jump.elf"
 FIRMWARE = (
-    "/sw-payload/gem5-sw/opensbi/build/platform/generic/firmware/fw_jump.elf"
+    "/sw-payload/gem5-sw/zephyr-proj/mini-cpubench/build/zephyr/zephyr.elf"
 )
-KERNEL = "/sw-payload/gem5-sw/linux-gem5/vmlinux"  # RISC-V kernel ELF
-DISK = "/sw-payload/gem5-sw/rootfs/out-rootfs/rootfs.ext4"  # root filesystem image
+KERNEL = (
+    "/sw-payload/gem5-sw/zephyr-proj/mini-cpubench/build/zephyr/zephyr.elf"
+)
+DISK = "/sw-payload/gem5-sw/rootfs/out-rootfs/pseudo_disk.img"  # root filesystem image
 
 assert os.path.exists(KERNEL), f"Kernel not found: {KERNEL}"
 assert os.path.exists(DISK), f"Disk image not found: {DISK}"
@@ -50,12 +53,12 @@ board.set_kernel_disk_workload(
     bootloader=fw_res,
     kernel=kernel_res,
     disk_image=disk_res,
-    kernel_args=[
-        "console=ttyS0",
-        "root=/dev/vda1",
-        "rw",
-        "init=/sbin/init",
-    ],
+    # kernel_args=[
+    #     "console=ttyS0",
+    #     "root=/dev/vda1",
+    #     "rw",
+    #     "init=/sbin/init",
+    # ],
 )
 
 sim = Simulator(board=board)

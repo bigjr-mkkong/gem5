@@ -234,11 +234,9 @@ DRAMsim3::recvTimingReq(PacketPtr pkt)
         // a transaction matches the burst size of the memory (which we
         // cannot determine without parsing the ini file ourselves)
         // wrapper.enqueue(pkt->getAddr(), pkt->isWrite());
-        wrapper.enqueue_with_data(\
+        wrapper.enqueue(\
                 pkt->getAddr(),\
-                pkt->isWrite(),
-                pkt->getConstPtr<uint8_t>(),
-                pkt->getSize());
+                pkt->isWrite());
 
         return true;
     } else {

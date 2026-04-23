@@ -125,18 +125,18 @@ DRAMsim3Wrapper::enqueue(uint64_t addr, bool is_write)
     assert(success);
 }
 
-void
-DRAMsim3Wrapper::enqueue_with_data(uint64_t addr, bool is_write,\
-        const uint8_t *cptr, size_t size){
-    [[maybe_unused]] bool success = dramsim->AddTransactionWithData( \
-            addr, \
-            is_write, \
-            cptr, \
-            size \
-            );
+// void
+// DRAMsim3Wrapper::enqueue_with_data(uint64_t addr, bool is_write,\
+//         const uint8_t *cptr, size_t size){
+//     [[maybe_unused]] bool success = dramsim->AddTransactionWithData( \
+//             addr, \
+//             is_write, \
+//             cptr, \
+//             size \
+//             );
 
-    assert(success);
-}
+//     assert(success);
+// }
 
 double
 DRAMsim3Wrapper::clockPeriod() const
