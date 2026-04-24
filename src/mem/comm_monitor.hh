@@ -413,6 +413,10 @@ class CommMonitor : public SimObject
     /** Instantiate stats */
     MonitorStats stats;
 
+    bool stats_en;
+
+    void set_stats(bool new_val);
+
   protected: // Probe points
     /**
      * @{

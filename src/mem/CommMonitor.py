@@ -115,3 +115,6 @@ class CommMonitor(SimObject):
     read_addr_mask = Param.Addr(MaxAddr, "Address mask for read address")
     write_addr_mask = Param.Addr(MaxAddr, "Address mask for write address")
     disable_addr_dists = Param.Bool(True, "Disable address distributions")
+
+    def set_stats(self, new_val):
+        """Bridge with CPP"""

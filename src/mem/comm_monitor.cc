@@ -40,6 +40,7 @@
 #include "mem/comm_monitor.hh"
 
 #include "base/trace.hh"
+#include "comm_monitor.hh"
 #include "debug/CommMonitor.hh"
 #include "sim/core.hh"
 #include "sim/cur_tick.hh"
@@ -55,7 +56,8 @@ CommMonitor::CommMonitor(const Params &params)
       samplePeriodicEvent([this]{ samplePeriodic(); }, name()),
       samplePeriodTicks(params.sample_period),
       samplePeriod(params.sample_period / sim_clock::as_float::s),
-      stats(this, params)
+      stats(this, params),
+      stats_en(false)
 {
     DPRINTF(CommMonitor,
             "Created monitor %s with sample period %d ticks (%f ms)\n",
@@ -364,15 +366,24 @@ CommMonitor::recvAtomic(PacketPtr pkt)
 
     const Tick delay(memSidePort.sendAtomic(pkt));
 
-    stats.updateReqStats(req_pkt_info, true, expects_response);
-    if (expects_response)
-        stats.updateRespStats(req_pkt_info, delay, true);
+    if (stats_en) {
+        stats.updateReqStats(req_pkt_info, true, expects_response);
+        if (expects_response)
+            stats.updateRespStats(req_pkt_info, delay, true);
+    }
 
     // Some packets, such as WritebackDirty, don't need response.
     assert(pkt->isResponse() || !expects_response);
     probing::PacketInfo resp_pkt_info(pkt);
-    ppPktResp->notify(resp_pkt_info);
+    if (stats_en)
+        ppPktResp->notify(resp_pkt_info);
     return delay;
+}
+
+void
+CommMonitor::set_stats(bool new_val)
+{
+    stats_en = new_val;
 }
 
 Tick

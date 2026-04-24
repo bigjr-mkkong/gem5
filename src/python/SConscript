@@ -44,6 +44,7 @@ PySource('gem5.components.boards',
     'gem5/components/boards/abstract_system_board.py')
 PySource('gem5.components.boards', 'gem5/components/boards/mem_mode.py')
 PySource('gem5.components.boards', 'gem5/components/boards/riscv_board.py')
+PySource('gem5.components.boards', 'gem5/components/boards/my_rv64_board.py')
 PySource('gem5.components.boards.experimental',
     'gem5/components/boards/experimental/__init__.py')
 PySource('gem5.components.boards.experimental',
