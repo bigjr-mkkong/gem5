@@ -7,6 +7,12 @@ from m5.objects import (
 )
 
 from gem5.components.boards.my_rv64_board import MyRiscvBoard
+from gem5.components.cachehierarchies.classic.no_cache import (
+    NoCache,
+)
+from gem5.components.cachehierarchies.classic.private_l1_cache_hierarchy import (
+    PrivateL1CacheHierarchy,
+)
 from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
     PrivateL1PrivateL2CacheHierarchy,
 )
@@ -66,9 +72,11 @@ processor = SimpleProcessor(
     cpu_type=CPUTypes.TIMING, num_cores=1, isa=ISA.RISCV
 )
 
-cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
-    l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
-)
+# cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
+#     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
+# )
+
+cache_hierarchy = NoCache()
 
 # Use our traced memory wrapper
 memory = TracedSingleChannel("DDR4_4Gb_x4_2400", size="4GiB")
@@ -103,10 +111,10 @@ while True:
 
     if exit_msg == "workbegin":
         print("Profile begin catched")
-        board.memory.comm_monitor.set_stats(True)
+        board.memory.comm_monitor.set_stats(1)
     elif exit_msg == "workend":
         print("Profile end catched")
-        board.memory.comm_monitor.set_stats(False)
+        board.memory.comm_monitor.set_stats(0)
 
     elif (
         exit_msg == "exiting with last active thread context"

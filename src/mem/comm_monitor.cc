@@ -383,6 +383,13 @@ CommMonitor::recvAtomic(PacketPtr pkt)
 void
 CommMonitor::set_stats(bool new_val)
 {
+    if(stats_en ^ new_val) {
+        if(new_val){
+            fprintf(stdout, "memtraffic states enabled,from %d to %d", stats_en, new_val);
+        } else {
+            fprintf(stdout, "memtraffic states disabled,from %d to %d", stats_en, new_val);
+        }
+    }
     stats_en = new_val;
 }
 
@@ -421,7 +428,7 @@ CommMonitor::recvTimingReq(PacketPtr pkt)
         delete pkt->popSenderState();
     }
 
-    if (successful) {
+    if (successful && stats_en) {
         ppPktReq->notify(pkt_info);
     }
 
@@ -474,7 +481,9 @@ CommMonitor::recvTimingResp(PacketPtr pkt)
     }
 
     if (successful) {
-        ppPktResp->notify(pkt_info);
+        if(stats_en){
+            ppPktResp->notify(pkt_info);
+        }
         DPRINTF(CommMonitor, "Received %s response\n", pkt->isRead() ? "read" :
                 pkt->isWrite() ?  "write" : "non read/write");
         stats.updateRespStats(pkt_info, latency, false);

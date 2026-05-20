@@ -78,6 +78,7 @@ class CommMonitor : public SimObject
     void init() override;
     void startup() override;
     void regProbePoints() override;
+    void set_stats(bool new_val);
 
   public: // SimObject interfaces
     Port &getPort(const std::string &if_name,
@@ -415,7 +416,6 @@ class CommMonitor : public SimObject
 
     bool stats_en;
 
-    void set_stats(bool new_val);
 
   protected: // Probe points
     /**

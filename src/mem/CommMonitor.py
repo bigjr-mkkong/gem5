@@ -36,7 +36,10 @@
 from m5.objects.System import System
 from m5.params import *
 from m5.proxy import *
-from m5.SimObject import SimObject
+from m5.SimObject import (
+    PyBindMethod,
+    SimObject,
+)
 
 
 # The communication monitor will most typically be used in combination
@@ -116,5 +119,7 @@ class CommMonitor(SimObject):
     write_addr_mask = Param.Addr(MaxAddr, "Address mask for write address")
     disable_addr_dists = Param.Bool(True, "Disable address distributions")
 
-    def set_stats(self, new_val):
-        """Bridge with CPP"""
+    cxx_exports = [PyBindMethod("set_stats")]
+
+    # def set_stats(self, new_val):
+    #     """Bridge with CPP"""
