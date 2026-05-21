@@ -92,7 +92,8 @@ def main():
     while protolib.decodeMessage(proto_in, packet):
         num_packets += 1
         # ReadReq is 1 and WriteReq is 4 in src/mem/packet.hh Command enum
-        cmd = "r" if packet.cmd == 1 else ("w" if packet.cmd == 4 else "u")
+        # cmd = "r" if packet.cmd == 1 else ("w" if packet.cmd == 4 else "u")
+        cmd = str(packet.cmd)
         if packet.HasField("pkt_id"):
             ascii_out.write(f"{packet.pkt_id},")
         if packet.HasField("flags"):

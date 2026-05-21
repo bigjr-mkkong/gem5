@@ -45,6 +45,7 @@
 #include "sim/core.hh"
 #include "sim/cur_tick.hh"
 #include "sim/stats.hh"
+#include <cstdio>
 
 namespace gem5
 {
@@ -385,11 +386,12 @@ CommMonitor::set_stats(bool new_val)
 {
     if(stats_en ^ new_val) {
         if(new_val){
-            fprintf(stdout, "memtraffic states enabled,from %d to %d", stats_en, new_val);
+            fprintf(stdout, "memtraffic states enabled,from %d to %d\n", stats_en, new_val);
         } else {
-            fprintf(stdout, "memtraffic states disabled,from %d to %d", stats_en, new_val);
+            fprintf(stdout, "memtraffic states disabled,from %d to %d\n", stats_en, new_val);
         }
     }
+    fflush(stdout);
     stats_en = new_val;
 }
 

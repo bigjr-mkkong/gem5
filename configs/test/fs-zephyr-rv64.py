@@ -76,7 +76,10 @@ processor = SimpleProcessor(
 #     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
 # )
 
-cache_hierarchy = NoCache()
+# cache_hierarchy = NoCache()
+cache_hierarchy = PrivateL1CacheHierarchy(
+    l1d_size="8KiB", l1i_size="32KiB"
+)
 
 # Use our traced memory wrapper
 memory = TracedSingleChannel("DDR4_4Gb_x4_2400", size="4GiB")
