@@ -41,8 +41,8 @@ from m5.params import *
 # A wrapper for DRAMSim3 multi-channel memory controller
 class DRAMsim3(AbstractMemory):
     type = "DRAMsim3"
-    cxx_header = "mem/dramsim3.hh"
-    cxx_class = "gem5::memory::DRAMsim3"
+    cxx_header = "mem/pesim_rs.hh"
+    cxx_class = "gem5::memory::PESim_rs"
 
     # A single port for now
     port = ResponsePort(

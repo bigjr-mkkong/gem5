@@ -123,6 +123,8 @@ if env['HAVE_DRAMSIM3']:
     SimObject('DRAMsim3.py', sim_objects=['DRAMsim3'])
     Source('dramsim3_wrapper.cc')
     Source('dramsim3.cc')
+    Source('pesim_rs_wrapper.cc')
+    Source('pesim_rs.cc')
 
 if env['HAVE_DRAMSYS']:
     SimObject('DRAMSys.py', sim_objects=['DRAMSys'])
