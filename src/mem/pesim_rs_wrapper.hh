@@ -7,18 +7,13 @@
 
 #include <cstdint>
 #include <queue>
+#include "pesim_rs_ffi.h"
 
 namespace gem5
 {
 namespace memory
 {
 
-struct PEsim_rs_MemReq
-{
-    uint64_t addr = 0;
-    uint64_t issue_time = 0;
-    bool is_write = false;
-};
 
 class PESim_rs_Wrapper
 {
@@ -38,15 +33,22 @@ class PESim_rs_Wrapper
     unsigned int _queueSize = QueueSize;
     unsigned int _burstSize = BurstSize;
 
+    PESim_body *sim = nullptr;
+
   public:
     PESim_rs_Wrapper();
     ~PESim_rs_Wrapper();
+
+    // Construct the Rust simulator only after gem5 has initialized the
+    // owning SimObject.  Rust FFI access before this point is invalid.
+    void init();
 
     void printStats();
     void resetStats();
 
     bool canAccept(uint64_t addr, bool is_write) const;
     void enqueue(uint64_t addr, bool is_write);
+    void enqueue_with_payload(uint64_t addr, std::vector<uint8_t> &payload, bool is_write);
 
     double clockPeriod() const;
     unsigned int queueSize() const;

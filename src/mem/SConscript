@@ -135,6 +135,20 @@ SimObject('MemChecker.py', sim_objects=['MemChecker', 'MemCheckerMonitor'])
 Source('mem_checker.cc')
 Source('mem_checker_monitor.cc')
 
+# This path is only available in gem5 docker image
+pesim_rs_root = "/gem5/ext/pesim/pesim-rs"
+
+env.Append(LIBPATH=[
+    pesim_rs_root + '/target/debug/',
+])
+
+env.Append(LIBS=[
+    'pesim_rs',
+    'pthread',
+    'dl',
+    'm',
+])
+
 DebugFlag('AddrRanges')
 DebugFlag('BaseXBar')
 DebugFlag('CoherentXBar')

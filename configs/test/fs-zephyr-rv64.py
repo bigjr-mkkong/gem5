@@ -1,6 +1,7 @@
 import os
 
 from gem5.components.boards.riscv_board import RiscvBoard
+from gem5.components.cachehierarchies.classic.no_cache import NoCache
 from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
     PrivateL1PrivateL2CacheHierarchy,
 )
@@ -34,6 +35,7 @@ processor = SimpleProcessor(
 cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
 )
+# cache_hierarchy = NoCache()
 
 memory = SingleChannel("DDR4_4Gb_x4_2400", size="4GiB")
 # memory = SingleChannel("DDR4_4Gb_x4_2400_pim", size="4GiB")

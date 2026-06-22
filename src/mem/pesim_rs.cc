@@ -8,7 +8,11 @@
 #include "base/trace.hh"
 #include "debug/DRAMsim3.hh"
 #include "debug/Drain.hh"
+#include "pesim_rs_wrapper.hh"
 #include "sim/system.hh"
+#include <cstdio>
+#include <vector>
+#include <cassert>
 
 namespace gem5
 {
@@ -24,11 +28,6 @@ PESim_rs::PESim_rs(const Params &p) :
     sendResponseEvent([this]{ sendResponse(); }, name()),
     tickEvent([this]{ tick(); }, name())
 {
-    DPRINTF(DRAMsim3,
-            "Instantiated PESim_rs stub with clock %f ns, queue size %u, "
-            "burst size %u\n",
-            wrapper.clockPeriod(), wrapper.queueSize(), wrapper.burstSize());
-
     registerExitCallback([this]() { wrapper.printStats(); });
 }
 
@@ -36,6 +35,12 @@ void
 PESim_rs::init()
 {
     AbstractMemory::init();
+    wrapper.init();
+
+    DPRINTF(DRAMsim3,
+            "Instantiated PESim_rs with clock %f ns, queue size %u, "
+            "burst size %u\n",
+            wrapper.clockPeriod(), wrapper.queueSize(), wrapper.burstSize());
 
     if (!port.isConnected()) {
         fatal("PESim_rs %s is unconnected!\n", name());
@@ -159,7 +164,20 @@ PESim_rs::recvTimingReq(PacketPtr pkt)
 
     const Addr addr = pkt->getAddr();
     const bool is_write = pkt->isWrite();
+    size_t payload_sz = pkt->getSize();
 
+    std::vector<uint8_t> payload;
+    if (is_write) {
+        panic_if(payload_sz != 64,
+         "gem5: Expect DRAM payload to be 64 bytes, got %d\n",
+         payload_sz);
+
+        const uint8_t *ptr = pkt->getConstPtr<uint8_t>();
+
+        payload.assign(ptr, ptr + 64);
+    } else {
+        payload.resize(64, 0);
+    }
     const bool can_accept =
         nbrOutstanding() < wrapper.queueSize() &&
         wrapper.canAccept(addr, is_write);
@@ -186,7 +204,8 @@ PESim_rs::recvTimingReq(PacketPtr pkt)
         DPRINTF(DRAMsim3, "Enqueueing address %#llx is_write=%d\n",
                 static_cast<unsigned long long>(addr), is_write);
 
-        wrapper.enqueue(addr, is_write);
+        // wrapper.enqueue(addr, is_write);
+        wrapper.enqueue_with_payload(addr, payload, is_write);
         return true;
     }
 
