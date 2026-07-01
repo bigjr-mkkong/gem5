@@ -15,9 +15,10 @@ typedef struct PEsim_rs_MemReq
     bool is_write;
 }PEsim_rs_MemReq;
 
-typedef struct PESim_cacheline{
+typedef struct PESim_payload{
     uint64_t dword_payload[8];
-}PESim_cacheline;
+    uint32_t payload_sz_bytes;
+}PESim_payload;
 
 typedef struct PESim_body PESim_body;
 
@@ -28,7 +29,7 @@ void pesim_print_stats(PESim_body *sim);
 void pesim_reset_stats(PESim_body *sim);
 
 bool pesim_canAccept(PESim_body *sim, uint64_t addr, bool is_write);
-bool pesim_enqueue_with_data(PESim_body *sim, uint64_t addr, PESim_cacheline payload, bool is_write);
+bool pesim_enqueue_with_data(PESim_body *sim, uint64_t addr, PESim_payload payload, bool is_write);
 
 double pesim_clock_period(PESim_body *sim);
 unsigned int pesim_queue_size(PESim_body *sim);

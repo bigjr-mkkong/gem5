@@ -16,6 +16,30 @@ from gem5.resources.resource import (
 )
 from gem5.simulate.simulator import Simulator
 
+from m5.objects import AddrRange, PMAChecker
+
+PIM_CMD_BASE = 0x17FFEF000
+PIM_CMD_SIZE = 0x1000
+def add_pim_uncacheable_pma(board):
+    pim_range = AddrRange(PIM_CMD_BASE, size=PIM_CMD_SIZE)
+
+    for core in board.get_processor().get_cores():
+        mmu = core.get_mmu()
+
+        old_ranges = []
+
+        if hasattr(mmu, "pma_checker") and mmu.pma_checker is not None:
+            try:
+                old_ranges = list(mmu.pma_checker.uncacheable)
+            except Exception:
+                old_ranges = []
+
+        mmu.pma_checker = PMAChecker(
+            uncacheable=old_ranges + [pim_range]
+        )
+
+        print(f"Installed PIM PMA uncacheable range: {pim_range}")
+
 # FIRMWARE = "/sw-payload/gem5-sw/opensbi/build/platform/generic/firmware/fw_jump.elf"
 FIRMWARE = (
     "/sw-payload/gem5-sw/zephyr-proj/mini-cpubench/build/zephyr/zephyr.elf"
@@ -63,6 +87,7 @@ board.set_kernel_disk_workload(
     # ],
 )
 
+add_pim_uncacheable_pma(board)
 sim = Simulator(board=board)
 
 print("[cfg] launching simulation …")

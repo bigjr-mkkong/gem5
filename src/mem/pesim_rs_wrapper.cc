@@ -102,6 +102,11 @@ PESim_rs_Wrapper::enqueue_with_payload(
     std::vector<uint8_t> &payload,
     bool is_write)
 {
+    std::fprintf(stdout,
+    "[C++ enqueue] %s addr=0x%llx payload_size=%zu\n",
+    is_write ? "WRITE" : "READ",
+    static_cast<unsigned long long>(addr),
+    payload.size());
 #ifdef PSEUDO_SIM
     assert(canAccept(addr, is_write));
 
@@ -130,44 +135,51 @@ PESim_rs_Wrapper::enqueue_with_payload(
     // }
 
 #else
-    PESim_cacheline cacheline{};
+    PESim_payload gem5_payload{};
 
-    auto wrap2u64 = [](const std::vector<uint8_t> &payload, size_t offset) -> uint64_t {
-        uint64_t value = 0;
+    fatal_if(payload.size() > 64,
+        "PESim payload larger than 64 bytes is unsupported: addr=%#llx size=%zu is_write=%d",
+        static_cast<unsigned long long>(addr),
+        payload.size(),
+        static_cast<int>(is_write));
 
-        for (size_t i = 0; i < 8; i++) {
-            value |= static_cast<uint64_t>(payload[offset + i]) << (8 * i);
-        }
-
-        return value;
-    };
+    gem5_payload.payload_sz_bytes = static_cast<uint32_t>(payload.size());
 
     if (is_write && !payload.empty()) {
-        assert(payload.size() >= 64);
-
-        // This only prints traces.
         std::fprintf(stdout,
-            "---------* Write Trace addr: 0x%llx *---------\n",
-            static_cast<unsigned long long>(addr));
+            "---------* Write Trace addr: 0x%llx payload_sz=%u *---------\n",
+            static_cast<unsigned long long>(addr),
+            gem5_payload.payload_sz_bytes);
 
-        for (int i = 0; i < 64; i++) {
-            std::fprintf(stdout,
-                "Byte %d is : %u\n",
-                i,
-                static_cast<unsigned>(payload[i]));
+        for (size_t i = 0; i < payload.size(); i++) {
+            const size_t dword_idx = i / 8;
+            const size_t byte_idx = i % 8;
+
+            gem5_payload.dword_payload[dword_idx] |=
+                static_cast<uint64_t>(payload[i]) << (8 * byte_idx);
         }
 
         for (int i = 0; i < 8; i++) {
-            cacheline.dword_payload[i] = wrap2u64(payload, i * 8);
+            std::fprintf(stdout,
+                "PAYLOAD[%d] is: %llu\n",
+                i,
+                static_cast<unsigned long long>(gem5_payload.dword_payload[i]));
         }
     } else {
-        for (int i = 0; i < 8; i++) {
-            cacheline.dword_payload[i] = 0;
-        }
+        std::fprintf(stdout,
+            "---------* %s Trace addr: 0x%llx payload_sz=%u *---------\n",
+            is_write ? "Write-empty" : "Read",
+            static_cast<unsigned long long>(addr),
+            gem5_payload.payload_sz_bytes);
     }
 
-    bool accepted = pesim_enqueue_with_data(sim, addr, cacheline, is_write);
-    assert(accepted);
+    bool accepted = pesim_enqueue_with_data(sim, addr, gem5_payload, is_write);
+
+    fatal_if(!accepted,
+        "PESim rejected request: addr=%#llx size=%u is_write=%d",
+        static_cast<unsigned long long>(addr),
+        gem5_payload.payload_sz_bytes,
+        static_cast<int>(is_write));
 #endif
 }
 

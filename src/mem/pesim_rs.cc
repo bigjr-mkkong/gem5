@@ -168,15 +168,15 @@ PESim_rs::recvTimingReq(PacketPtr pkt)
 
     std::vector<uint8_t> payload;
     if (is_write) {
-        panic_if(payload_sz != 64,
-         "gem5: Expect DRAM payload to be 64 bytes, got %d\n",
-         payload_sz);
+        // panic_if(payload_sz != 64,
+        //  "gem5: Expect DRAM payload to be 64 bytes, got %d\n",
+        //  payload_sz);
 
         const uint8_t *ptr = pkt->getConstPtr<uint8_t>();
 
-        payload.assign(ptr, ptr + 64);
+        payload.assign(ptr, ptr + payload_sz);
     } else {
-        payload.resize(64, 0);
+        payload.resize(payload_sz, 0);
     }
     const bool can_accept =
         nbrOutstanding() < wrapper.queueSize() &&
