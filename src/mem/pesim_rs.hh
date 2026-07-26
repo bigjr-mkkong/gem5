@@ -7,6 +7,7 @@
 
 #include <deque>
 #include <queue>
+#include <string>
 #include <unordered_map>
 
 #include "mem/abstract_mem.hh"
@@ -40,6 +41,10 @@ class PESim_rs : public AbstractMemory
 
     MemoryPort port;
     PESim_rs_Wrapper wrapper;
+    const std::string configFile;
+    const std::string outputDir;
+    const uint32_t controllerId;
+    const uint64_t pimSize;
 
     bool retryReq;
     bool retryResp;

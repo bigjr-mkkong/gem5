@@ -13,6 +13,8 @@ m5out
 /docs/_build
 /ext/dramsim2/DRAMSim2
 ext/dramsim3/DRAMSim3
+/ext/pesim/pesim-rs-intro.md
+/ext/pesim/pesim-rs-noagu-intro.md
 /ext/mcpat/regression/*/*.out
 /ext/pesim/pesim-rs
 /util/m5/*.o

@@ -20,9 +20,18 @@ typedef struct PESim_payload{
     uint32_t payload_sz_bytes;
 }PESim_payload;
 
+typedef struct PESim_config {
+    const char *config_file;
+    const char *output_dir;
+    uint32_t controller_id;
+    uint64_t controller_base;
+    uint64_t controller_size;
+    uint64_t pim_size;
+} PESim_config;
+
 typedef struct PESim_body PESim_body;
 
-PESim_body *pesim_new(void);
+PESim_body *pesim_new(const PESim_config *config);
 void pesim_free(PESim_body *sim);
 
 void pesim_print_stats(PESim_body *sim);

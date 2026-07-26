@@ -56,6 +56,12 @@ class DRAMsim3(AbstractMemory):
     filePath = Param.String(
         "ext/dramsim3/DRAMsim3/", "Directory to prepend to file names"
     )
+    controllerId = Param.Unsigned(
+        0, "Explicit PESim controller/channel identifier"
+    )
+    pimSize = Param.MemorySize(
+        "0B", "PIM-enabled prefix size within this controller"
+    )
 
 
 add_citation(

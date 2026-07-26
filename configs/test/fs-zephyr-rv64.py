@@ -5,7 +5,7 @@ from gem5.components.cachehierarchies.classic.no_cache import NoCache
 from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
     PrivateL1PrivateL2CacheHierarchy,
 )
-from gem5.components.memory.dramsim_3 import SingleChannel
+from gem5.components.memory.dramsim_3 import DualChannelPESim
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.components.processors.simple_processor import SimpleProcessor
 from gem5.isas import ISA
@@ -18,8 +18,29 @@ from gem5.simulate.simulator import Simulator
 
 from m5.objects import AddrRange, PMAChecker
 
-PIM_CMD_BASE = 0x17FFEF000
-PIM_CMD_SIZE = 0x1000
+PESIM_CONFIG_DIR = "/gem5/ext/pesim/pesim-rs/cfg"
+PESIM_REGULAR_CONFIG = os.path.join(
+    PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400.ini"
+)
+PESIM_PIM_CONFIG = os.path.join(
+    PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400_pim.ini"
+)
+
+# PIM_on controls the hardware capability: select the _pim DRAM configuration
+# for controller 1 and reserve its final 512 KiB as an uncacheable command area.
+PIM_on = True
+# PIM_full controls test scale only: False exposes 32 engines (2 GiB);
+# True prepares 127 engines (8128 MiB) while excluding the final 64 MiB engine.
+PIM_full = True
+
+if PIM_full and not PIM_on:
+    raise ValueError("PIM_full=True requires PIM_on=True")
+
+PIM_SIZE = (8128 if PIM_full else 2048) * 1024 * 1024 if PIM_on else 0
+PIM_CMD_BASE = 0x4_7FF8_0000
+PIM_CMD_SIZE = 512 * 1024
+
+
 def add_pim_uncacheable_pma(board):
     pim_range = AddrRange(PIM_CMD_BASE, size=PIM_CMD_SIZE)
 
@@ -53,7 +74,7 @@ assert os.path.exists(KERNEL), f"Kernel not found: {KERNEL}"
 assert os.path.exists(DISK), f"Disk image not found: {DISK}"
 
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, num_cores=1, isa=ISA.RISCV
+    cpu_type=CPUTypes.TIMING, num_cores=2, isa=ISA.RISCV
 )
 
 cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
@@ -61,8 +82,11 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
 )
 # cache_hierarchy = NoCache()
 
-memory = SingleChannel("DDR4_4Gb_x4_2400", size="4GiB")
-# memory = SingleChannel("DDR4_4Gb_x4_2400_pim", size="4GiB")
+memory = DualChannelPESim(
+    channel0_config=PESIM_REGULAR_CONFIG,
+    channel1_config=PESIM_PIM_CONFIG if PIM_on else PESIM_REGULAR_CONFIG,
+    channel1_pim_size=PIM_SIZE,
+)
 
 board = RiscvBoard(
     clk_freq="2GHz",
@@ -87,7 +111,8 @@ board.set_kernel_disk_workload(
     # ],
 )
 
-add_pim_uncacheable_pma(board)
+if PIM_on:
+    add_pim_uncacheable_pma(board)
 sim = Simulator(board=board)
 
 print("[cfg] launching simulation …")

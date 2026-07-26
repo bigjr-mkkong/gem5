@@ -24,11 +24,25 @@ PESim_rs_Wrapper::PESim_rs_Wrapper()
 }
 
 void
-PESim_rs_Wrapper::init()
+PESim_rs_Wrapper::init(
+    const std::string &config_file,
+    const std::string &output_dir,
+    uint32_t controller_id,
+    uint64_t controller_base,
+    uint64_t controller_size,
+    uint64_t pim_size)
 {
 #ifndef PSEUDO_SIM
     fatal_if(sim != nullptr, "PESim_rs_Wrapper initialized more than once");
-    sim = pesim_new();
+    const PESim_config config{
+        config_file.c_str(),
+        output_dir.c_str(),
+        controller_id,
+        controller_base,
+        controller_size,
+        pim_size,
+    };
+    sim = pesim_new(&config);
     fatal_if(sim == nullptr, "pesim_new() returned a null PESim_body");
 #endif
 }
@@ -102,11 +116,11 @@ PESim_rs_Wrapper::enqueue_with_payload(
     std::vector<uint8_t> &payload,
     bool is_write)
 {
-    std::fprintf(stdout,
-    "[C++ enqueue] %s addr=0x%llx payload_size=%zu\n",
-    is_write ? "WRITE" : "READ",
-    static_cast<unsigned long long>(addr),
-    payload.size());
+    // std::fprintf(stdout,
+    // "[C++ enqueue] %s addr=0x%llx payload_size=%zu\n",
+    // is_write ? "WRITE" : "READ",
+    // static_cast<unsigned long long>(addr),
+    // payload.size());
 #ifdef PSEUDO_SIM
     assert(canAccept(addr, is_write));
 
@@ -146,10 +160,10 @@ PESim_rs_Wrapper::enqueue_with_payload(
     gem5_payload.payload_sz_bytes = static_cast<uint32_t>(payload.size());
 
     if (is_write && !payload.empty()) {
-        std::fprintf(stdout,
-            "---------* Write Trace addr: 0x%llx payload_sz=%u *---------\n",
-            static_cast<unsigned long long>(addr),
-            gem5_payload.payload_sz_bytes);
+        // std::fprintf(stdout,
+        //     "---------* Write Trace addr: 0x%llx payload_sz=%u *---------\n",
+        //     static_cast<unsigned long long>(addr),
+        //     gem5_payload.payload_sz_bytes);
 
         for (size_t i = 0; i < payload.size(); i++) {
             const size_t dword_idx = i / 8;
@@ -159,18 +173,18 @@ PESim_rs_Wrapper::enqueue_with_payload(
                 static_cast<uint64_t>(payload[i]) << (8 * byte_idx);
         }
 
-        for (int i = 0; i < 8; i++) {
-            std::fprintf(stdout,
-                "PAYLOAD[%d] is: %llu\n",
-                i,
-                static_cast<unsigned long long>(gem5_payload.dword_payload[i]));
-        }
+        // for (int i = 0; i < 8; i++) {
+        //     std::fprintf(stdout,
+        //         "PAYLOAD[%d] is: %llu\n",
+        //         i,
+        //         static_cast<unsigned long long>(gem5_payload.dword_payload[i]));
+        // }
     } else {
-        std::fprintf(stdout,
-            "---------* %s Trace addr: 0x%llx payload_sz=%u *---------\n",
-            is_write ? "Write-empty" : "Read",
-            static_cast<unsigned long long>(addr),
-            gem5_payload.payload_sz_bytes);
+        // std::fprintf(stdout,
+        //     "---------* %s Trace addr: 0x%llx payload_sz=%u *---------\n",
+        //     is_write ? "Write-empty" : "Read",
+        //     static_cast<unsigned long long>(addr),
+        //     gem5_payload.payload_sz_bytes);
     }
 
     bool accepted = pesim_enqueue_with_data(sim, addr, gem5_payload, is_write);

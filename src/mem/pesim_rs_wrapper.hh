@@ -7,6 +7,9 @@
 
 #include <cstdint>
 #include <queue>
+#include <string>
+#include <vector>
+
 #include "pesim_rs_ffi.h"
 
 namespace gem5
@@ -41,7 +44,13 @@ class PESim_rs_Wrapper
 
     // Construct the Rust simulator only after gem5 has initialized the
     // owning SimObject.  Rust FFI access before this point is invalid.
-    void init();
+    void init(
+        const std::string &config_file,
+        const std::string &output_dir,
+        uint32_t controller_id,
+        uint64_t controller_base,
+        uint64_t controller_size,
+        uint64_t pim_size);
 
     void printStats();
     void resetStats();

@@ -96,6 +96,87 @@ class DRAMSim3MemCtrl(DRAMsim3):
         self.filePath = outdir
 
 
+class PESimMemCtrl(DRAMsim3):
+    """A PESim controller configured from an explicit DRAMSim3 INI path."""
+
+    def __init__(
+        self,
+        config_path: str,
+        controller_id: int,
+        pim_size: int = 0,
+    ) -> None:
+        super().__init__()
+        if not os.path.isfile(config_path):
+            raise Exception(
+                f"PESim DRAMSim3 configuration cannot be found: {config_path}"
+            )
+        self.configFile = config_path
+        self.filePath = os.path.join(
+            m5.options.outdir, f"pesim-controller-{controller_id}"
+        )
+        self.controllerId = controller_id
+        self.pimSize = f"{pim_size}B"
+
+
+class DualChannelPESim(AbstractMemorySystem):
+    """
+    Two contiguous, independently configured 8 GiB PESim controllers.
+
+    Controller IDs are passed explicitly into the Rust FFI; they do not depend
+    on construction order or gem5's internal DRAM channel metadata.
+    """
+
+    def __init__(
+        self,
+        channel0_config: str,
+        channel1_config: str,
+        channel1_pim_size: int = 0,
+        size_per_channel: str = "8GiB",
+    ) -> None:
+        super().__init__()
+        self._size_per_channel = toMemorySize(size_per_channel)
+        self._size = 2 * self._size_per_channel
+        self.mem_ctrls = [
+            PESimMemCtrl(channel0_config, controller_id=0),
+            PESimMemCtrl(
+                channel1_config,
+                controller_id=1,
+                pim_size=channel1_pim_size,
+            ),
+        ]
+
+    @overrides(AbstractMemorySystem)
+    def incorporate_memory(self, board: AbstractBoard) -> None:
+        pass
+
+    @overrides(AbstractMemorySystem)
+    def get_mem_ports(self) -> List[Tuple[AddrRange, Port]]:
+        return [(ctrl.range, ctrl.port) for ctrl in self.mem_ctrls]
+
+    @overrides(AbstractMemorySystem)
+    def get_memory_controllers(self) -> List[MemCtrl]:
+        return self.mem_ctrls
+
+    @overrides(AbstractMemorySystem)
+    def get_size(self) -> int:
+        return self._size
+
+    @overrides(AbstractMemorySystem)
+    def set_memory_range(self, ranges: List[AddrRange]) -> None:
+        if len(ranges) != 1 or ranges[0].size() != self._size:
+            raise Exception(
+                "Dual-channel PESim requires one contiguous range equal to "
+                "twice the per-controller size."
+            )
+        base = ranges[0].start
+        self.mem_ctrls[0].range = AddrRange(
+            base, size=self._size_per_channel
+        )
+        self.mem_ctrls[1].range = AddrRange(
+            base + self._size_per_channel, size=self._size_per_channel
+        )
+
+
 class SingleChannel(AbstractMemorySystem):
     """
     A Single Channel Memory system.

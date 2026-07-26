@@ -23,6 +23,10 @@ PESim_rs::PESim_rs(const Params &p) :
     AbstractMemory(p),
     port(name() + ".port", *this),
     wrapper(),
+    configFile(p.configFile),
+    outputDir(p.filePath),
+    controllerId(p.controllerId),
+    pimSize(p.pimSize),
     retryReq(false), retryResp(false), startTick(0),
     nbrOutstandingReads(0), nbrOutstandingWrites(0),
     sendResponseEvent([this]{ sendResponse(); }, name()),
@@ -35,11 +39,20 @@ void
 PESim_rs::init()
 {
     AbstractMemory::init();
-    wrapper.init();
+    wrapper.init(
+        configFile,
+        outputDir,
+        controllerId,
+        range.start(),
+        range.size(),
+        pimSize);
 
     DPRINTF(DRAMsim3,
-            "Instantiated PESim_rs with clock %f ns, queue size %u, "
-            "burst size %u\n",
+            "Instantiated PESim_rs controller %u range [%#llx, %#llx] "
+            "with clock %f ns, queue size %u, burst size %u\n",
+            controllerId,
+            static_cast<unsigned long long>(range.start()),
+            static_cast<unsigned long long>(range.end()),
             wrapper.clockPeriod(), wrapper.queueSize(), wrapper.burstSize());
 
     if (!port.isConnected()) {
