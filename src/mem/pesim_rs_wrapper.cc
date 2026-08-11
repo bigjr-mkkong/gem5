@@ -7,6 +7,8 @@
 #include "pesim_rs_wrapper.hh"
 
 #include "base/logging.hh"
+#include "base/trace.hh"
+#include "debug/PIMCommand.hh"
 
 #include <cassert>
 #include <cstdio>
@@ -18,6 +20,29 @@ namespace gem5
 {
 namespace memory
 {
+
+namespace
+{
+
+PESim_payload
+packPayload(const std::vector<uint8_t> &payload)
+{
+    fatal_if(payload.size() > 64,
+        "PESim payload larger than 64 bytes is unsupported: size=%zu",
+        payload.size());
+
+    PESim_payload packed{};
+    packed.payload_sz_bytes = static_cast<uint32_t>(payload.size());
+    for (size_t i = 0; i < payload.size(); ++i) {
+        const size_t dword_idx = i / 8;
+        const size_t byte_idx = i % 8;
+        packed.dword_payload[dword_idx] |=
+            static_cast<uint64_t>(payload[i]) << (8 * byte_idx);
+    }
+    return packed;
+}
+
+} // anonymous namespace
 
 PESim_rs_Wrapper::PESim_rs_Wrapper()
 {
@@ -82,13 +107,47 @@ PESim_rs_Wrapper::resetStats()
 }
 
 bool
+PESim_rs_Wrapper::canAcceptPimCommand(
+    uint64_t offset, const std::vector<uint8_t> &payload,
+    bool is_write) const
+{
+#ifdef PSEUDO_SIM
+    return true;
+#else
+    return pesim_can_accept_pim_cmd(
+        sim, offset, packPayload(payload), is_write);
+#endif
+}
+
+void
+PESim_rs_Wrapper::enqueuePimCommand(
+    uint64_t offset, const std::vector<uint8_t> &payload,
+    bool is_write)
+{
+#ifdef PSEUDO_SIM
+    ++submit_cnt;
+#else
+    const bool accepted = pesim_enqueue_pim_cmd(
+        sim, offset, packPayload(payload), is_write);
+    fatal_if(!accepted,
+        "PESim rejected a preflighted PIM command: offset=%#llx size=%zu",
+        static_cast<unsigned long long>(offset), payload.size());
+    DPRINTF(PIMCommand, "Enqueued offset=%#llx size=%llu\n",
+            static_cast<unsigned long long>(offset),
+            static_cast<unsigned long long>(payload.size()));
+#endif
+}
+
+bool
 PESim_rs_Wrapper::canAccept(uint64_t addr, bool is_write) const
 {
 #ifdef PSEUDO_SIM
-    return pend_req.size() < _queueSize;
+    const bool accepted = pend_req.size() < _queueSize;
 #else
-    return pesim_canAccept(sim, addr, is_write);
+    const bool accepted = pesim_canAccept(sim, addr, is_write);
 #endif
+
+    return accepted;
 }
 
 void
@@ -97,7 +156,7 @@ PESim_rs_Wrapper::enqueue(uint64_t addr, bool is_write)
 #ifdef PSEUDO_SIM
     assert(canAccept(addr, is_write));
 
-    PEsim_rs_MemReq req;
+    PEsim_rs_MemReq req{};
     req.addr = addr;
     req.issue_time = tick_cnt;
     req.is_write = is_write;
@@ -124,7 +183,7 @@ PESim_rs_Wrapper::enqueue_with_payload(
 #ifdef PSEUDO_SIM
     assert(canAccept(addr, is_write));
 
-    PEsim_rs_MemReq req;
+    PEsim_rs_MemReq req{};
     req.addr = addr;
     req.issue_time = tick_cnt;
     req.is_write = is_write;
@@ -149,29 +208,13 @@ PESim_rs_Wrapper::enqueue_with_payload(
     // }
 
 #else
-    PESim_payload gem5_payload{};
-
-    fatal_if(payload.size() > 64,
-        "PESim payload larger than 64 bytes is unsupported: addr=%#llx size=%zu is_write=%d",
-        static_cast<unsigned long long>(addr),
-        payload.size(),
-        static_cast<int>(is_write));
-
-    gem5_payload.payload_sz_bytes = static_cast<uint32_t>(payload.size());
+    PESim_payload gem5_payload = packPayload(payload);
 
     if (is_write && !payload.empty()) {
         // std::fprintf(stdout,
         //     "---------* Write Trace addr: 0x%llx payload_sz=%u *---------\n",
         //     static_cast<unsigned long long>(addr),
         //     gem5_payload.payload_sz_bytes);
-
-        for (size_t i = 0; i < payload.size(); i++) {
-            const size_t dword_idx = i / 8;
-            const size_t byte_idx = i % 8;
-
-            gem5_payload.dword_payload[dword_idx] |=
-                static_cast<uint64_t>(payload[i]) << (8 * byte_idx);
-        }
 
         // for (int i = 0; i < 8; i++) {
         //     std::fprintf(stdout,

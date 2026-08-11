@@ -1,5 +1,7 @@
 import os
 
+from m5.objects import PMAChecker
+
 from gem5.components.boards.riscv_board import RiscvBoard
 from gem5.components.cachehierarchies.classic.no_cache import NoCache
 from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
@@ -16,33 +18,49 @@ from gem5.resources.resource import (
 )
 from gem5.simulate.simulator import Simulator
 
-from m5.objects import AddrRange, PMAChecker
-
 PESIM_CONFIG_DIR = "/gem5/ext/pesim/pesim-rs/cfg"
-PESIM_REGULAR_CONFIG = os.path.join(
-    PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400.ini"
-)
-PESIM_PIM_CONFIG = os.path.join(
-    PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400_pim.ini"
+PESIM_REGULAR_CONFIG = os.path.join(PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400.ini")
+PESIM_PIM_CONFIG = os.path.join(PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400_pim.ini")
+PESIM_PRECACT_CONFIG = os.path.join(
+    PESIM_CONFIG_DIR, "DDR4_8Gb_x4_2400_pim_prec_act.ini"
 )
 
 # PIM_on controls the hardware capability: select the _pim DRAM configuration
-# for controller 1 and reserve its final 512 KiB as an uncacheable command area.
-PIM_on = True
-# PIM_full controls test scale only: False exposes 32 engines (2 GiB);
-# True prepares 127 engines (8128 MiB) while excluding the final 64 MiB engine.
-PIM_full = True
+# for both controllers and install their shared out-of-range command page.
+PIM_on = os.environ.get("PIM_ON", "1") != "0"
+# PIM_full controls test scale only: False exposes 32 engines (2 GiB) on
+# controller 0; True prepares all 256 engines (16 GiB) across both controllers.
+PIM_full = os.environ.get("PIM_FULL", "1") != "0"
+PIM_scenario = os.environ.get("PIM_SCENARIO", "parallel-fast-switch")
+
+if PIM_scenario not in (
+    "sequential",
+    "parallel-prec-act",
+    "parallel-fast-switch",
+):
+    raise ValueError(f"unsupported PIM_SCENARIO={PIM_scenario}")
+
+PESIM_SELECTED_PIM_CONFIG = (
+    PESIM_PIM_CONFIG
+    if PIM_scenario == "parallel-fast-switch"
+    else PESIM_PRECACT_CONFIG
+)
 
 if PIM_full and not PIM_on:
     raise ValueError("PIM_full=True requires PIM_on=True")
 
-PIM_SIZE = (8128 if PIM_full else 2048) * 1024 * 1024 if PIM_on else 0
-PIM_CMD_BASE = 0x4_7FF8_0000
-PIM_CMD_SIZE = 512 * 1024
+if PIM_on:
+    CHANNEL0_PIM_SIZE = (8192 if PIM_full else 2048) * 1024 * 1024
+    CHANNEL1_PIM_SIZE = 8192 * 1024 * 1024 if PIM_full else 0
+else:
+    CHANNEL0_PIM_SIZE = 0
+    CHANNEL1_PIM_SIZE = 0
 
 
 def add_pim_uncacheable_pma(board):
-    pim_range = AddrRange(PIM_CMD_BASE, size=PIM_CMD_SIZE)
+    pim_range = board.get_memory().get_pim_mmio_range()
+    if pim_range is None:
+        raise ValueError("PIM MMIO range requested without a PIM router")
 
     for core in board.get_processor().get_cores():
         mmu = core.get_mmu()
@@ -55,11 +73,10 @@ def add_pim_uncacheable_pma(board):
             except Exception:
                 old_ranges = []
 
-        mmu.pma_checker = PMAChecker(
-            uncacheable=old_ranges + [pim_range]
-        )
+        mmu.pma_checker = PMAChecker(uncacheable=old_ranges + [pim_range])
 
         print(f"Installed PIM PMA uncacheable range: {pim_range}")
+
 
 # FIRMWARE = "/sw-payload/gem5-sw/opensbi/build/platform/generic/firmware/fw_jump.elf"
 FIRMWARE = (
@@ -83,9 +100,16 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
 # cache_hierarchy = NoCache()
 
 memory = DualChannelPESim(
-    channel0_config=PESIM_REGULAR_CONFIG,
-    channel1_config=PESIM_PIM_CONFIG if PIM_on else PESIM_REGULAR_CONFIG,
-    channel1_pim_size=PIM_SIZE,
+    channel0_config=(
+        PESIM_SELECTED_PIM_CONFIG if PIM_on else PESIM_REGULAR_CONFIG
+    ),
+    channel1_config=(
+        PESIM_SELECTED_PIM_CONFIG
+        if PIM_on and PIM_full
+        else PESIM_REGULAR_CONFIG
+    ),
+    channel0_pim_size=CHANNEL0_PIM_SIZE,
+    channel1_pim_size=CHANNEL1_PIM_SIZE,
 )
 
 board = RiscvBoard(
@@ -103,6 +127,7 @@ board.set_kernel_disk_workload(
     bootloader=fw_res,
     kernel=kernel_res,
     disk_image=disk_res,
+    readfile_contents=os.environ.get("GEM5_READFILE_CONTENTS"),
     # kernel_args=[
     #     "console=ttyS0",
     #     "root=/dev/vda1",

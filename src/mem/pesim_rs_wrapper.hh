@@ -55,6 +55,13 @@ class PESim_rs_Wrapper
     void printStats();
     void resetStats();
 
+    bool canAcceptPimCommand(
+        uint64_t offset, const std::vector<uint8_t> &payload,
+        bool is_write) const;
+    void enqueuePimCommand(
+        uint64_t offset, const std::vector<uint8_t> &payload,
+        bool is_write);
+
     bool canAccept(uint64_t addr, bool is_write) const;
     void enqueue(uint64_t addr, bool is_write);
     void enqueue_with_payload(uint64_t addr, std::vector<uint8_t> &payload, bool is_write);

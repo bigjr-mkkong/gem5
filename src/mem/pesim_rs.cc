@@ -80,6 +80,31 @@ PESim_rs::resetStats()
     wrapper.resetStats();
 }
 
+bool
+PESim_rs::canAcceptPimCommand(
+    uint64_t offset, const std::vector<uint8_t> &payload,
+    bool is_write) const
+{
+    return wrapper.canAcceptPimCommand(offset, payload, is_write);
+}
+
+void
+PESim_rs::enqueuePimCommand(
+    uint64_t offset, const std::vector<uint8_t> &payload,
+    bool is_write)
+{
+    wrapper.enqueuePimCommand(offset, payload, is_write);
+}
+
+void
+PESim_rs::setPimQueryCompletionCallback(
+    std::function<void(uint32_t, uint64_t)> callback)
+{
+    fatal_if(pimQueryCompletionCallback,
+             "%s PIM query completion callback registered twice", name());
+    pimQueryCompletionCallback = std::move(callback);
+}
+
 void
 PESim_rs::sendResponse()
 {
@@ -122,6 +147,18 @@ PESim_rs::tick()
 
         while (wrapper.hasComplete()) {
             const PEsim_rs_MemReq req = wrapper.getComplete();
+
+            if (req.is_pim_query) {
+                fatal_if(!pimQueryCompletionCallback,
+                         "%s completed PIM_QUERY without a router callback",
+                         name());
+                DPRINTF(DRAMsim3,
+                        "PIM_QUERY completion payload=%#llx controller=%u\n",
+                        static_cast<unsigned long long>(req.payload_word0),
+                        controllerId);
+                pimQueryCompletionCallback(controllerId, req.payload_word0);
+                continue;
+            }
 
             DPRINTF(DRAMsim3, "PESim_rs completion addr=%#llx is_write=%d\n",
                     static_cast<unsigned long long>(req.addr), req.is_write);

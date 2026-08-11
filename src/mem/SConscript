@@ -121,10 +121,13 @@ if env['HAVE_DRAMSIM']:
 
 if env['HAVE_DRAMSIM3']:
     SimObject('DRAMsim3.py', sim_objects=['DRAMsim3'])
+    SimObject('PIMCommandRouter.py', sim_objects=['PIMCommandRouter'])
     Source('dramsim3_wrapper.cc')
     Source('dramsim3.cc')
     Source('pesim_rs_wrapper.cc')
     Source('pesim_rs.cc')
+    Source('pim_command_router.cc')
+    DebugFlag('PIMCommand')
 
 if env['HAVE_DRAMSYS']:
     SimObject('DRAMSys.py', sim_objects=['DRAMSys'])
@@ -139,7 +142,7 @@ Source('mem_checker_monitor.cc')
 pesim_rs_root = "/gem5/ext/pesim/pesim-rs"
 
 env.Append(LIBPATH=[
-    pesim_rs_root + '/target/debug/',
+    pesim_rs_root + '/target/release/',
 ])
 
 env.Append(LIBS=[

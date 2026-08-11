@@ -6,9 +6,11 @@
 #define __MEM_PESIM_RS_HH__
 
 #include <deque>
+#include <functional>
 #include <queue>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "mem/abstract_mem.hh"
 #include "mem/pesim_rs_wrapper.hh"
@@ -69,6 +71,7 @@ class PESim_rs : public AbstractMemory
     EventFunctionWrapper tickEvent;
 
     std::unique_ptr<Packet> pendingDelete;
+    std::function<void(uint32_t, uint64_t)> pimQueryCompletionCallback;
 
   public:
     // This keeps compatibility with gem5's existing DRAMsim3.py SimObject.
@@ -87,6 +90,15 @@ class PESim_rs : public AbstractMemory
     void init() override;
     void startup() override;
     void resetStats() override;
+
+    bool canAcceptPimCommand(
+        uint64_t offset, const std::vector<uint8_t> &payload,
+        bool is_write) const;
+    void enqueuePimCommand(
+        uint64_t offset, const std::vector<uint8_t> &payload,
+        bool is_write);
+    void setPimQueryCompletionCallback(
+        std::function<void(uint32_t, uint64_t)> callback);
 
   protected:
     Tick recvAtomic(PacketPtr pkt);

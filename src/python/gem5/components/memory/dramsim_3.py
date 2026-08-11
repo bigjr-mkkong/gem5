@@ -12,6 +12,7 @@ from m5.objects import (
     AddrRange,
     DRAMsim3,
     MemCtrl,
+    PIMCommandRouter,
     Port,
 )
 from m5.util.convert import toMemorySize
@@ -130,6 +131,7 @@ class DualChannelPESim(AbstractMemorySystem):
         self,
         channel0_config: str,
         channel1_config: str,
+        channel0_pim_size: int = 0,
         channel1_pim_size: int = 0,
         size_per_channel: str = "8GiB",
     ) -> None:
@@ -137,13 +139,31 @@ class DualChannelPESim(AbstractMemorySystem):
         self._size_per_channel = toMemorySize(size_per_channel)
         self._size = 2 * self._size_per_channel
         self.mem_ctrls = [
-            PESimMemCtrl(channel0_config, controller_id=0),
+            PESimMemCtrl(
+                channel0_config,
+                controller_id=0,
+                pim_size=channel0_pim_size,
+            ),
             PESimMemCtrl(
                 channel1_config,
                 controller_id=1,
                 pim_size=channel1_pim_size,
             ),
         ]
+        self._pim_targets = [
+            ctrl
+            for ctrl, pim_size in zip(
+                self.mem_ctrls,
+                (channel0_pim_size, channel1_pim_size),
+            )
+            if pim_size > 0
+        ]
+        self._has_pim_cmd_router = bool(self._pim_targets)
+        if self._has_pim_cmd_router:
+            self.pim_cmd_router = PIMCommandRouter(
+                mmioRange=AddrRange(0, size=4096),
+                targets=self._pim_targets,
+            )
 
     @overrides(AbstractMemorySystem)
     def incorporate_memory(self, board: AbstractBoard) -> None:
@@ -151,7 +171,17 @@ class DualChannelPESim(AbstractMemorySystem):
 
     @overrides(AbstractMemorySystem)
     def get_mem_ports(self) -> List[Tuple[AddrRange, Port]]:
-        return [(ctrl.range, ctrl.port) for ctrl in self.mem_ctrls]
+        ports = [(ctrl.range, ctrl.port) for ctrl in self.mem_ctrls]
+        if self._has_pim_cmd_router:
+            ports.append(
+                (self.pim_cmd_router.mmioRange, self.pim_cmd_router.port)
+            )
+        return ports
+
+    def get_pim_mmio_range(self) -> Optional[AddrRange]:
+        if not self._has_pim_cmd_router:
+            return None
+        return self.pim_cmd_router.mmioRange
 
     @overrides(AbstractMemorySystem)
     def get_memory_controllers(self) -> List[MemCtrl]:
@@ -169,12 +199,14 @@ class DualChannelPESim(AbstractMemorySystem):
                 "twice the per-controller size."
             )
         base = ranges[0].start
-        self.mem_ctrls[0].range = AddrRange(
-            base, size=self._size_per_channel
-        )
+        self.mem_ctrls[0].range = AddrRange(base, size=self._size_per_channel)
         self.mem_ctrls[1].range = AddrRange(
             base + self._size_per_channel, size=self._size_per_channel
         )
+        if self._has_pim_cmd_router:
+            self.pim_cmd_router.mmioRange = AddrRange(
+                base + self._size, size=4096
+            )
 
 
 class SingleChannel(AbstractMemorySystem):
