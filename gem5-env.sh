@@ -1,6 +1,10 @@
-#! /bin/zsh
+#!/usr/bin/env bash
+set -euo pipefail
 
-docker run -u $UID:$GID \
-    --volume /home/michael/Projects/pimtlb/gem5:/gem5 \
-    --volume /home/michael/Projects/pimtlb/sw-payload:/sw-payload \
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+project_root=${PIMTLB_ROOT:-$(cd -- "$script_dir/.." && pwd -P)}
+
+exec docker run -u "$(id -u):$(id -g)" \
+    --volume "$project_root/gem5:/gem5" \
+    --volume "$project_root/sw-payload:/sw-payload" \
     --rm -it gem5env

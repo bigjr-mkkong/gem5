@@ -3,9 +3,8 @@ import os
 from m5.objects import PMAChecker
 
 from gem5.components.boards.riscv_board import RiscvBoard
-from gem5.components.cachehierarchies.classic.no_cache import NoCache
-from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
-    PrivateL1PrivateL2CacheHierarchy,
+from gem5.components.cachehierarchies.classic.private_l1_shared_l2_cache_hierarchy import (
+    PrivateL1SharedL2CacheHierarchy,
 )
 from gem5.components.memory.dramsim_3 import DualChannelPESim
 from gem5.components.processors.cpu_types import CPUTypes
@@ -90,15 +89,11 @@ DISK = "/sw-payload/gem5-sw/rootfs/out-rootfs/pseudo_disk.img"  # root filesyste
 assert os.path.exists(KERNEL), f"Kernel not found: {KERNEL}"
 assert os.path.exists(DISK), f"Disk image not found: {DISK}"
 
-processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, num_cores=2, isa=ISA.RISCV
-)
+processor = SimpleProcessor(cpu_type=CPUTypes.O3, num_cores=2, isa=ISA.RISCV)
 
-cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
-    l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
+cache_hierarchy = PrivateL1SharedL2CacheHierarchy(
+    l1d_size="64KiB", l1i_size="64KiB", l2_size="2MiB"
 )
-# cache_hierarchy = NoCache()
-
 memory = DualChannelPESim(
     channel0_config=(
         PESIM_SELECTED_PIM_CONFIG if PIM_on else PESIM_REGULAR_CONFIG
